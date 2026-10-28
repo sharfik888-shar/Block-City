@@ -3,106 +3,155 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Block City v0.5</title>
+<title>Block City 3D v0.7</title>
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   :root {
-    --bg: #0a0a0a; --card: #151515; --card2: #1d1d1d; --border: #2a2a2a;
+    --bg: #050505; --card: #151515; --card2: #1d1d1d; --border: #333;
     --green: #4ade80; --green-dark: #14532d; --red: #ef4444; --red-dark: #3f1d1d;
     --purple: #a855f7; --yellow: #facc15; --text: #e5e5e5; --muted: #888;
   }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--bg); color: var(--text); margin: 0; padding: 10px; max-width: 900px; margin: 0 auto; padding-bottom: 80px;
+    background: radial-gradient(circle at center, #1a1a1a 0%, #000 100%); 
+    color: var(--text); margin: 0; padding: 10px; max-width: 900px; margin: 0 auto; padding-bottom: 80px;
+    overflow-x: hidden; min-height: 100vh;
   }
-  h1 { font-size: 17px; margin: 0 0 8px; display: flex; align-items: center; gap: 6px; }
-  h1 small { font-size: 11px; color: var(--muted); font-weight: normal; }
-  .topbar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 10px; }
-  .stat { background: var(--card); padding: 6px 4px; border-radius: 8px; font-size: 11px; border: 1px solid var(--border); text-align: center; }
-  .stat b { display: block; color: var(--green); font-size: 13px; margin-top: 2px; }
+  h1 { font-size: 20px; margin: 0 0 10px; text-shadow: 2px 2px 0px #000, 0 0 10px var(--green); color: #fff; }
   
-  .tabs { display: flex; gap: 4px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 2px; }
-  .tab { background: var(--card); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: bold; white-space: nowrap; }
-  .tab.active { background: var(--green); color: #000; border-color: var(--green); }
+  .topbar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 15px; }
+  .stat { 
+    background: linear-gradient(180deg, #2a2a2a, #111); 
+    padding: 6px 4px; border-radius: 8px; font-size: 11px; 
+    border-bottom: 3px solid #000; border-right: 2px solid #000;
+    text-align: center; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+  }
+  .stat b { display: block; color: var(--green); font-size: 14px; margin-top: 2px; text-shadow: 1px 1px 0 #000; }
+  
+  .tabs { display: flex; gap: 6px; margin-bottom: 15px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { 
+    background: linear-gradient(180deg, #333, #151515); border: 1px solid #444; color: var(--text); 
+    padding: 8px 14px; border-radius: 8px; font-size: 12px; cursor: pointer; font-weight: bold; white-space: nowrap; 
+    box-shadow: 0 3px 0 #000; transition: 0.1s; 
+  }
+  .tab:active { transform: translateY(3px); box-shadow: none; }
+  .tab.active { background: linear-gradient(180deg, #4ade80, #166534); color: #000; border-color: #4ade80; box-shadow: 0 3px 0 #000, 0 0 10px var(--green); text-shadow: 1px 1px 0 rgba(255,255,255,0.3); }
 
   .view { display: none; }
-  .view.active { display: block; animation: fade .2s; }
-  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; } }
+  .view.active { display: block; animation: fade 0.3s; }
+  @keyframes fade { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
 
-  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px; margin-bottom: 10px; }
-  .panel h2 { font-size: 13px; margin: 0 0 8px; color: var(--green); }
+  .panel { 
+    background: linear-gradient(135deg, #1a1a1a, #111); 
+    border: 1px solid #333; border-radius: 12px; padding: 12px; margin-bottom: 15px; 
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 5px 15px rgba(0,0,0,0.5); 
+    overflow: hidden; 
+  }
+  .panel h2 { font-size: 14px; margin: 0 0 10px; color: var(--green); text-shadow: 1px 1px 0 #000; }
 
-  /* ФИЛЬТРЫ */
-  .filters { display: flex; gap: 4px; margin-bottom: 8px; overflow-x: auto; padding-bottom: 4px; }
-  .f-btn { background: var(--card2); border: 1px solid var(--border); color: var(--muted); padding: 4px 8px; border-radius: 6px; font-size: 10px; cursor: pointer; white-space: nowrap; }
-  .f-btn.active { background: var(--green-dark); border-color: var(--green); color: var(--green); }
+  /* ===== 3D КАРТА ===== */
+  .map-container { display: flex; justify-content: center; padding: 20px 0; perspective: 1000px; }
+  #map { 
+    display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; 
+    transform: rotateX(45deg) rotateZ(-45deg); /* Наклон для изометрии */
+    transform-style: preserve-3d;
+  }
+  .cell { 
+    width: 36px; height: 36px; 
+    background: #1a1a1a; 
+    border: 1px solid #333; 
+    border-radius: 4px; 
+    position: relative; 
+    cursor: pointer; 
+    transform-style: preserve-3d;
+    transition: 0.2s;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+  }
+  .cell:hover { transform: translateZ(10px); background: #2a2a2a; }
+  
+  /* Эффект объема для занятых блоков */
+  .cell.mine { 
+    background: var(--green-dark); border-color: var(--green); 
+    transform: translateZ(15px); 
+    box-shadow: -2px 2px 0 #000, -4px 4px 0 rgba(0,0,0,0.5), -6px 6px 10px rgba(0,0,0,0.8); 
+  }
+  .cell.mine::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 15px; background: #0a2a15; transform: rotateX(-90deg); transform-origin: bottom; }
+  
+  .cell.taken { 
+    background: var(--red-dark); border-color: var(--red); 
+    transform: translateZ(10px); 
+    box-shadow: -2px 2px 0 #000, -4px 4px 0 rgba(0,0,0,0.5); 
+  }
+  
+  .cell .shop { position: absolute; font-size: 8px; font-weight: bold; color: #fff; transform: rotateZ(45deg) rotateX(-45deg) translateY(-10px); text-shadow: 1px 1px 2px #000; white-space: nowrap; pointer-events: none; }
+  .cell .price { position: absolute; font-size: 9px; color: var(--yellow); transform: rotateZ(45deg) rotateX(-45deg) translateY(10px); text-shadow: 1px 1px 1px #000; }
+  .cell svg { width: 60%; height: 60%; transform: rotateZ(45deg) rotateX(-45deg) translateZ(10px); filter: drop-shadow(0 0 2px rgba(255,255,255,0.2)); }
 
-  .item { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12px; gap: 8px; }
-  .item:last-child { border: none; }
+  /* ===== 3D МАГАЗИН ===== */
+  .shop-header { 
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; 
+    background: linear-gradient(180deg, #2a2a2a, #111); padding: 15px; border-radius: 10px; 
+    border-bottom: 4px solid #000; box-shadow: 0 5px 10px rgba(0,0,0,0.5);
+  }
+  .shop-header h2 { margin: 0; font-size: 18px; color: var(--yellow); text-shadow: 2px 2px 0 #000; }
+  
+  .shelf { 
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; 
+    padding: 15px; background: #111; border-radius: 10px; 
+    border: 2px solid #333; box-shadow: inset 0 0 20px #000;
+  }
+  
+  .slot { 
+    aspect-ratio: 1; 
+    background: linear-gradient(135deg, #222, #111); 
+    border: 2px dashed #444; border-radius: 8px; 
+    display: flex; flex-direction: column; align-items: center; justify-content: center; 
+    cursor: pointer; position: relative; overflow: hidden; min-width: 0;
+    box-shadow: inset 0 5px 10px rgba(0,0,0,0.5);
+    transition: 0.2s;
+  }
+  .slot.filled { 
+    border: 2px solid var(--green); background: linear-gradient(135deg, #1a3a2a, #0a1a10); 
+    box-shadow: inset 0 0 10px var(--green-dark), 0 5px 15px rgba(0,0,0,0.8); 
+  }
+  .slot:active { transform: scale(0.95); }
+  
+  .slot svg { width: 35%; height: 35%; margin-bottom: 2px; filter: drop-shadow(0 0 5px rgba(74, 222, 128, 0.3)); }
+  .slot .name { font-size: 10px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center; color: #fff; }
+  .slot .brand-text { font-size: 9px; color: #aaa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%; text-align: center; }
+  .slot .price-tag { font-size: 10px; color: #000; background: var(--yellow); padding: 1px 6px; border-radius: 4px; margin-top: 2px; font-weight: bold; box-shadow: 0 2px 0 #a16207; }
+  .slot .remove { position: absolute; top: 2px; right: 2px; background: var(--red); color: white; border-radius: 50%; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold; cursor: pointer; z-index: 10; box-shadow: 0 2px 0 #7f1d1d; }
+
+  /* СПИСКИ (Рынок, Склад) */
+  .item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #222; font-size: 12px; gap: 8px; background: #151515; margin-bottom: 4px; border-radius: 6px; }
   .item-info { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
-  .item-info small { color: var(--muted); font-size: 10px; display: block; }
-  
-  button { background: var(--green); color: #000; border: none; padding: 6px 10px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11px; transition: .15s; }
-  button:active { transform: scale(.96); }
-  button:disabled { background: #333; color: #666; cursor: not-allowed; }
-  button.danger { background: var(--red); color: #fff; }
-  button.ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .item-info .title { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; }
+  .item-info small { color: var(--muted); display: block; }
+  button { background: linear-gradient(180deg, #4ade80, #166534); color: #000; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; box-shadow: 0 3px 0 #000; transition: 0.1s; }
+  button:active { transform: translateY(3px); box-shadow: none; }
+  button:disabled { background: #333; color: #666; box-shadow: 0 3px 0 #000; }
+  button.danger { background: linear-gradient(180deg, #ef4444, #991b1b); color: #fff; }
+  button.ghost { background: transparent; border: 1px solid #444; color: #fff; box-shadow: none; }
 
-  /* КАРТА */
-  #map { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; margin: 8px 0; }
-  .cell { aspect-ratio: 1; background: var(--card2); border: 1px solid var(--border); border-radius: 5px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 9px; cursor: pointer; text-align: center; padding: 1px; transition: .15s; }
-  .cell.mine { background: var(--green-dark); border-color: var(--green); }
-  .cell.taken { background: var(--red-dark); border-color: var(--red); }
-  .cell .shop { font-weight: bold; font-size: 7px; color: #ccc; margin-top: 1px; }
-  .cell .price { color: var(--yellow); font-size: 8px; }
-  .cell svg { width: 50%; height: 50%; }
-
-  /* МАГАЗИН */
-  .shop-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; background: var(--card2); padding: 10px; border-radius: 8px; border: 1px solid var(--border); }
-  .shop-header h2 { margin: 0; font-size: 15px; color: var(--yellow); }
-  .shop-layout { display: flex; flex-direction: column; gap: 10px; }
-  
-  .shelf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-  .slot { background: #111; border: 2px dashed #333; border-radius: 8px; aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: .2s; padding: 4px; text-align: center; position: relative; }
-  .slot.filled { border-style: solid; border-color: var(--green); background: var(--card2); }
-  .slot.filled:hover { border-color: var(--yellow); }
-  .slot svg { width: 40%; height: 40%; margin-bottom: 4px; }
-  .slot .name { font-size: 9px; font-weight: bold; line-height: 1.1; }
-  .slot .price-tag { font-size: 9px; color: var(--yellow); background: #000; padding: 1px 4px; border-radius: 4px; margin-top: 2px; }
-  .slot .remove { position: absolute; top: 2px; right: 2px; background: var(--red); color: white; border-radius: 50%; width: 14px; height: 14px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; cursor: pointer; }
-
-  .customer-zone { min-height: 80px; background: #111; border-radius: 8px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; padding: 10px; }
-  .customer-bubble { background: var(--card); border: 1px solid var(--purple); padding: 8px 12px; border-radius: 20px; font-size: 11px; animation: popIn .3s; display: flex; align-items: center; gap: 8px; max-width: 100%; text-align: left; }
-  @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-  .customer-bubble svg { width: 24px; height: 24px; flex-shrink: 0; }
-
-  .empty { color: #666; font-size: 12px; padding: 8px; text-align: center; }
-  .hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
-  .rarity { font-size: 8px; padding: 1px 5px; border-radius: 4px; font-weight: bold; }
-  .r-common { background: #333; color: #aaa; }
-  .r-rare { background: #1e3a8a; color: #93c5fd; }
-  .r-epic { background: #4c1d95; color: #c4b5fd; }
-  .r-legend { background: #854d0e; color: #fde047; }
-
-  /* МОДАЛЬНОЕ ОКНО ВЫБОРА */
-  .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+  /* Модалка */
+  .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
   .modal.active { display: flex; }
-  .modal-content { background: var(--card); width: 100%; max-width: 400px; max-height: 80vh; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border); }
-  .modal-header { padding: 10px 15px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-  .modal-header h3 { margin: 0; font-size: 14px; color: var(--green); }
+  .modal-content { background: #111; width: 100%; max-width: 400px; height: 70vh; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; border: 2px solid #333; box-shadow: 0 10px 30px #000; }
+  .modal-header { padding: 15px; border-bottom: 2px solid #333; display: flex; justify-content: space-between; align-items: center; background: #1a1a1a; }
   .modal-body { padding: 10px; overflow-y: auto; flex: 1; }
 
-  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--card); border: 1px solid var(--green); color: var(--text); padding: 10px 16px; border-radius: 8px; font-size: 12px; z-index: 999; box-shadow: 0 4px 20px rgba(0,0,0,.6); max-width: 90%; text-align: center; animation: toastIn .2s; }
-  @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 10px); } }
+  .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); background: #111; border: 2px solid var(--green); color: #fff; padding: 12px 20px; border-radius: 8px; font-size: 13px; z-index: 999; box-shadow: 0 5px 20px rgba(0,0,0,0.8); text-align: center; animation: popIn 0.3s; }
+  @keyframes popIn { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
   .toast.err { border-color: var(--red); }
 </style>
 </head>
 <body>
 
-<h1>🏪 Block City <small>v0.5 (Ассортимент)</small></h1>
+<h1>🏙️ Block City 3D</h1>
 
 <div class="topbar">
-  <div class="stat">💰<b id="cash">2000</b></div>
+  <div class="stat">💰<b id="cash">3000</b></div>
   <div class="stat">⭐<b id="rep">1</b></div>
   <div class="stat">🏪<b id="blocks">0</b></div>
   <div class="stat">📦<b id="invCount">0</b></div>
@@ -119,15 +168,17 @@
 <!-- КАРТА -->
 <div class="view active" id="view-map">
   <div class="panel">
-    <h2>Карта района (8×8)</h2>
-    <div id="map"></div>
-    <div class="hint">Нажми на свой 🟩 блок, чтобы зайти в магазин.</div>
+    <h2>Изометрический район</h2>
+    <div class="map-container">
+      <div id="map"></div>
+    </div>
+    <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:10px">Нажми на свой 🟩 блок, чтобы зайти в магазин</div>
   </div>
 </div>
 
 <!-- МАГАЗИН -->
 <div class="view" id="view-shop">
-  <button class="ghost" onclick="switchTab('map')" style="margin-bottom:10px">← Назад на карту</button>
+  <button class="ghost" onclick="switchTab('map')" style="margin-bottom:15px">← Назад на карту</button>
   
   <div class="shop-header">
     <div>
@@ -143,10 +194,10 @@
       <div class="shelf" id="shelf"></div>
     </div>
 
-    <div class="panel">
+    <div class="panel" style="background:#0a0a0a">
       <h2>🚶 Покупатели</h2>
-      <div class="customer-zone" id="customerZone">
-        <div class="empty">Ждем покупателей...</div>
+      <div id="customerZone" style="min-height:80px;display:flex;align-items:center;justify-content:center;background:#111;border-radius:8px;border:2px solid #222;">
+        <div style="color:#555;font-size:12px">Ждем покупателей...</div>
       </div>
     </div>
   </div>
@@ -155,8 +206,7 @@
 <!-- РЫНОК -->
 <div class="view" id="view-market">
   <div class="panel">
-    <h2>🛒 Оптовый рынок (Закупка)</h2>
-    <div class="filters" id="marketFilters"></div>
+    <h2>🛒 Оптовый рынок</h2>
     <div id="market"></div>
   </div>
 </div>
@@ -165,7 +215,6 @@
 <div class="view" id="view-inv">
   <div class="panel">
     <h2>📦 Мой склад</h2>
-    <div class="filters" id="invFilters"></div>
     <div id="inventory"></div>
   </div>
 </div>
@@ -174,7 +223,7 @@
 <div class="view" id="view-log">
   <div class="panel">
     <h2>📜 Лог событий</h2>
-    <div id="log" style="font-size:11px;color:#aaa;max-height:300px;overflow-y:auto;white-space:pre-line;background:#0a0a0a;padding:8px;border-radius:6px;border:1px solid var(--border);font-family:monospace;"></div>
+    <div id="log" style="font-size:11px;color:#aaa;max-height:300px;overflow-y:auto;white-space:pre-line;background:#000;padding:10px;border-radius:6px;border:1px solid #333;font-family:monospace;"></div>
   </div>
 </div>
 
@@ -182,8 +231,8 @@
 <div class="modal" id="selectModal">
   <div class="modal-content">
     <div class="modal-header">
-      <h3>Выбери товар на витрину</h3>
-      <button class="danger" onclick="closeModal()" style="padding:4px 8px">✕</button>
+      <h3 style="margin:0;color:var(--green)">Выбери товар</h3>
+      <button class="danger" onclick="closeModal()" style="padding:4px 10px">✕</button>
     </div>
     <div class="modal-body" id="modalBody"></div>
   </div>
@@ -191,11 +240,11 @@
 
 <script>
 const SIZE = 8;
-const SAVE_KEY = 'blockcity_save_v5';
+const SAVE_KEY = 'blockcity_3d_v7';
 
 // ===== SVG =====
 const SVG = {
-  blockFree: `<svg viewBox="0 0 40 40"><rect x="4" y="4" width="32" height="32" rx="6" fill="#1d1d1d" stroke="#333" stroke-width="2"/><path d="M14 20h12M20 14v12" stroke="#555" stroke-width="2" stroke-linecap="round"/></svg>`,
+  blockFree: `<svg viewBox="0 0 40 40"><rect x="4" y="4" width="32" height="32" rx="6" fill="#1d1d1d" stroke="#444" stroke-width="2"/></svg>`,
   blockMine: `<svg viewBox="0 0 40 40"><rect x="4" y="4" width="32" height="32" rx="6" fill="#14532d" stroke="#4ade80" stroke-width="2"/><path d="M12 26V16l8-5 8 5v10" fill="none" stroke="#4ade80" stroke-width="2" stroke-linejoin="round"/><rect x="17" y="21" width="6" height="8" fill="#4ade80"/></svg>`,
   blockTaken: `<svg viewBox="0 0 40 40"><rect x="4" y="4" width="32" height="32" rx="6" fill="#3f1d1d" stroke="#ef4444" stroke-width="2"/><path d="M14 14l12 12M26 14L14 26" stroke="#ef4444" stroke-width="2" stroke-linecap="round"/></svg>`,
   hoodie: `<svg viewBox="0 0 40 40"><path d="M12 8l8-4 8 4v6l4 4v14H8V18l4-4z" fill="#333" stroke="#888" stroke-width="1.5"/><path d="M16 8c0 4 8 4 8 0" fill="none" stroke="#888" stroke-width="1.5"/></svg>`,
@@ -209,8 +258,7 @@ const SVG = {
 };
 function catIcon(cat) {
   const m = { 'верх': 'hoodie', 'низ': 'jeans', 'обувь': 'sneaker', 'голова': 'cap', 'аксессуар': 'chain' };
-  const s = SVG[m[cat] || 'hoodie'];
-  return `<span style="display:inline-block;width:100%;height:100%">${s}</span>`;
+  return `<span style="display:inline-block;width:100%;height:100%">${SVG[m[cat] || 'hoodie']}</span>`;
 }
 
 // ===== ГЕНЕРАТОР ТОВАРОВ =====
@@ -222,61 +270,34 @@ const BRANDS = {
 };
 
 const CATEGORIES = {
-  'верх': [
-    { name: 'Худи', base: 120 }, { name: 'Свитшот', base: 100 }, { name: 'Футболка', base: 60 }, { name: 'Лонгслив', base: 70 },
-    { name: 'Куртка', base: 200 }, { name: 'Пуховик', base: 300 }, { name: 'Ветровка', base: 150 }, { name: 'Рубашка', base: 90 }
-  ],
-  'низ': [
-    { name: 'Джинсы', base: 90 }, { name: 'Джоггеры', base: 80 }, { name: 'Карго', base: 110 }, { name: 'Шорты', base: 50 }, { name: 'Спорт. штаны', base: 70 }
-  ],
-  'обувь': [
-    { name: 'Кроссовки', base: 180 }, { name: 'Ботинки', base: 200 }, { name: 'Сандалии', base: 80 }, { name: 'Слипоны', base: 100 }, { name: 'Хайтопы', base: 220 }
-  ],
-  'голова': [
-    { name: 'Шапка', base: 50 }, { name: 'Кепка', base: 60 }, { name: 'Бейсболка', base: 55 }, { name: 'Дюраг', base: 40 }, { name: 'Бандана', base: 45 }
-  ],
-  'аксессуар': [
-    { name: 'Ремень', base: 80 }, { name: 'Цепь', base: 150 }, { name: 'Очки', base: 100 }, { name: 'Сумка', base: 180 }, { name: 'Рюкзак', base: 120 }, { name: 'Часы', base: 250 }, { name: 'Браслет', base: 60 }
-  ]
+  'верх': [{ name: 'Худи', base: 120 }, { name: 'Свитшот', base: 100 }, { name: 'Футболка', base: 60 }, { name: 'Лонгслив', base: 70 }, { name: 'Куртка', base: 200 }, { name: 'Пуховик', base: 300 }, { name: 'Ветровка', base: 150 }, { name: 'Рубашка', base: 90 }],
+  'низ': [{ name: 'Джинсы', base: 90 }, { name: 'Джоггеры', base: 80 }, { name: 'Карго', base: 110 }, { name: 'Шорты', base: 50 }, { name: 'Спорт. штаны', base: 70 }],
+  'обувь': [{ name: 'Кроссовки', base: 180 }, { name: 'Ботинки', base: 200 }, { name: 'Сандалии', base: 80 }, { name: 'Слипоны', base: 100 }, { name: 'Хайтопы', base: 220 }],
+  'голова': [{ name: 'Шапка', base: 50 }, { name: 'Кепка', base: 60 }, { name: 'Бейсболка', base: 55 }, { name: 'Дюраг', base: 40 }, { name: 'Бандана', base: 45 }],
+  'аксессуар': [{ name: 'Ремень', base: 80 }, { name: 'Цепь', base: 150 }, { name: 'Очки', base: 100 }, { name: 'Сумка', base: 180 }, { name: 'Рюкзак', base: 120 }, { name: 'Часы', base: 250 }, { name: 'Браслет', base: 60 }]
 };
 
-// Генерируем около 70+ уникальных товаров
 const PRODUCTS = [];
 let pId = 0;
 for (const [cat, items] of Object.entries(CATEGORIES)) {
   for (const item of items) {
-    // Берем 3-4 случайных бренда для каждой категории
     const brandKeys = Object.keys(BRANDS);
     const shuffled = [...brandKeys].sort(() => 0.5 - Math.random());
     const selectedBrands = shuffled.slice(0, 4); 
-    
     for (const brand of selectedBrands) {
       const bData = BRANDS[brand];
-      const multiplier = bData.tier; // Чем выше тир, тем дороже
-      
+      const multiplier = bData.tier; 
       const buy = Math.floor((item.base + (Math.random() * 20)) * multiplier);
-      const sell = Math.floor(buy * (1.4 + Math.random() * 0.4)); // Наценка 40-80%
-      
+      const sell = Math.floor(buy * (1.4 + Math.random() * 0.4)); 
       let rarity = 'common';
       if (bData.tier === 2) rarity = 'rare';
       if (bData.tier === 3) rarity = 'epic';
       if (bData.tier === 4) rarity = 'legend';
-
-      PRODUCTS.push({
-        id: 'p' + (pId++),
-        name: `${item.name} ${brand}`,
-        brand: brand,
-        cat: cat,
-        buy: buy,
-        sell: sell,
-        rep: bData.rep,
-        rarity: rarity
-      });
+      PRODUCTS.push({ id: 'p' + (pId++), name: `${item.name} ${brand}`, brand: brand, cat: cat, buy: buy, sell: sell, rep: bData.rep, rarity: rarity });
     }
   }
 }
 
-// Рэперы
 const RAPPERS = [
   { name: 'King Von', budget: 1500, likes: ['Nike', 'Jordan'], minRep: 1 },
   { name: 'Lil Loaded', budget: 2000, likes: ['Gucci', 'Louis Vuitton'], minRep: 2 },
@@ -292,12 +313,7 @@ const RAPPERS = [
 const state = {
   cash: 3000, rep: 1, day: 1,
   map: Array.from({ length: SIZE }, () => Array(SIZE).fill(null)),
-  inventory: [],
-  myBlocks: [],
-  activeShop: null,
-  log: [],
-  marketFilter: 'all',
-  invFilter: 'all'
+  inventory: [], myBlocks: [], activeShop: null, log: []
 };
 
 const $ = (id) => document.getElementById(id);
@@ -330,33 +346,13 @@ function updateUI() {
   $('invCount').textContent = state.inventory.length;
   $('day').textContent = state.day;
   renderMap();
-  renderFilters();
   renderMarket();
   renderInventory();
   if (state.activeShop) renderShopView();
   save();
 }
 
-// ===== ФИЛЬТРЫ =====
-function renderFilters() {
-  const cats = ['all', 'верх', 'низ', 'обувь', 'голова', 'аксессуар'];
-  
-  $('marketFilters').innerHTML = cats.map(c => 
-    `<div class="f-btn ${state.marketFilter === c ? 'active' : ''}" onclick="setFilter('market', '${c}')">${c === 'all' ? 'Все' : c}</div>`
-  ).join('');
-  
-  $('invFilters').innerHTML = cats.map(c => 
-    `<div class="f-btn ${state.invFilter === c ? 'active' : ''}" onclick="setFilter('inv', '${c}')">${c === 'all' ? 'Все' : c}</div>`
-  ).join('');
-}
-
-function setFilter(type, cat) {
-  if (type === 'market') { state.marketFilter = cat; renderMarket(); }
-  else { state.invFilter = cat; renderInventory(); }
-  renderFilters();
-}
-
-// ===== КАРТА =====
+// ===== КАРТА 3D =====
 function renderMap() {
   const el = $('map');
   el.innerHTML = '';
@@ -405,7 +401,6 @@ function renderShopView() {
   if (!b) return;
   
   $('shopTitle').textContent = `🏬 ${b.shop}`;
-  
   const shelfEl = $('shelf');
   shelfEl.innerHTML = '';
   b.shelves.forEach((item, i) => {
@@ -415,42 +410,38 @@ function renderShopView() {
     if (item) {
       slot.innerHTML = `
         <div class="remove" onclick="event.stopPropagation(); removeFromShelf(${i})">✕</div>
-        ${catIcon(item.cat)}
-        <div class="name">${item.name.split(' ')[0]}</div>
-        <div style="font-size:8px;color:#aaa">${item.brand}</div>
+        <div style="width:30%;height:30%;min-height:20px;display:flex;align-items:center;justify-content:center;margin-bottom:2px">${catIcon(item.cat)}</div>
+        <div class="name">${item.name}</div>
+        <div class="brand-text">${item.brand}</div>
         <div class="price-tag">${item.price}</div>
       `;
       slot.onclick = () => removeFromShelf(i);
     } else {
-      slot.innerHTML = `<div style="color:#555;font-size:20px">+</div><div style="font-size:9px;color:#555">Выбрать</div>`;
+      slot.innerHTML = `<div style="color:#555;font-size:24px">+</div><div style="font-size:10px;color:#555">Выбрать</div>`;
       slot.onclick = () => openSelectModal(i);
     }
     shelfEl.appendChild(slot);
   });
 }
 
-// Модалка выбора товара
 function openSelectModal(slotIndex) {
   if (!state.inventory.length) { toast('Склад пуст!', true); return; }
-  
   const modal = $('selectModal');
   const body = $('modalBody');
-  
   body.innerHTML = state.inventory.map((item, idx) => {
     const markupPrice = Math.floor(item.sell * 1.2);
     return `
-      <div class="item" style="cursor:pointer" onclick="selectItemForShelf(${idx}, ${slotIndex})">
+      <div class="item" style="cursor:pointer;margin-bottom:6px" onclick="selectItemForShelf(${idx}, ${slotIndex})">
         <div class="item-info">
-          <span style="width:24px;height:24px">${catIcon(item.cat)}</span>
+          <span style="width:24px;height:24px;flex-shrink:0">${catIcon(item.cat)}</span>
           <div>
-            <div>${item.name}</div>
-            <small>${item.brand} · Цена в магазине: <b style="color:var(--yellow)">${markupPrice}</b></small>
+            <div class="title">${item.name}</div>
+            <small>${item.brand} · Цена: <b style="color:var(--yellow)">${markupPrice}</b></small>
           </div>
         </div>
       </div>
     `;
   }).join('');
-  
   modal.classList.add('active');
 }
 
@@ -459,10 +450,8 @@ function closeModal() { $('selectModal').classList.remove('active'); }
 function selectItemForShelf(invIndex, slotIndex) {
   const item = state.inventory.splice(invIndex, 1)[0];
   const markupPrice = Math.floor(item.sell * 1.2);
-  
   const b = state.map[state.activeShop.x][state.activeShop.y];
   b.shelves[slotIndex] = { ...item, price: markupPrice };
-  
   logMsg(`📦 Выставил ${item.name} за ${markupPrice}`);
   closeModal();
   updateUI();
@@ -472,11 +461,9 @@ function removeFromShelf(slotIndex) {
   const b = state.map[state.activeShop.x][state.activeShop.y];
   const item = b.shelves[slotIndex];
   if (!item) return;
-  
   const original = PRODUCTS.find(p => p.id === item.id) || item;
   state.inventory.push({ ...original });
   b.shelves[slotIndex] = null;
-  
   logMsg(`📦 Убрал ${item.name} с витрины`);
   updateUI();
 }
@@ -491,19 +478,14 @@ function renameShop() {
 function renderMarket() {
   const el = $('market');
   el.innerHTML = '';
-  
-  const filtered = PRODUCTS.filter(p => state.marketFilter === 'all' || p.cat === state.marketFilter);
-  
-  if (!filtered.length) { el.innerHTML = '<div class="empty">Ничего не найдено</div>'; return; }
-
-  filtered.forEach(p => {
+  PRODUCTS.forEach(p => {
     const row = document.createElement('div');
     row.className = 'item';
     row.innerHTML = `
       <div class="item-info">
-        <span style="width:24px;height:24px">${catIcon(p.cat)}</span>
+        <span style="width:24px;height:24px;flex-shrink:0">${catIcon(p.cat)}</span>
         <div>
-          <div>${p.name} <span class="rarity r-${p.rarity}">${p.rarity}</span></div>
+          <div class="title">${p.name}</div>
           <small>${p.brand} · Закупка: ${p.buy}</small>
         </div>
       </div>
@@ -514,7 +496,7 @@ function renderMarket() {
     btn.onclick = () => {
       state.cash -= p.buy;
       state.inventory.push({ ...p });
-      logMsg(`🛍️ Куплен ${p.name} за ${p.buy}`);
+      logMsg(`🛍️ Куплен ${p.name}`);
       updateUI();
     };
     row.appendChild(btn);
@@ -526,22 +508,18 @@ function renderMarket() {
 function renderInventory() {
   const el = $('inventory');
   el.innerHTML = '';
-  
-  const filtered = state.inventory.map((p, i) => ({ p, i })).filter(x => state.invFilter === 'all' || x.p.cat === state.invFilter);
-  
-  if (!filtered.length) {
-    el.innerHTML = '<div class="empty">Склад пуст или нет вещей в этой категории.</div>';
+  if (!state.inventory.length) {
+    el.innerHTML = '<div style="color:#666;text-align:center;padding:20px">Склад пуст</div>';
     return;
   }
-  
-  filtered.forEach(({ p, i }) => {
+  state.inventory.forEach((p) => {
     const row = document.createElement('div');
     row.className = 'item';
     row.innerHTML = `
       <div class="item-info">
-        <span style="width:24px;height:24px">${catIcon(p.cat)}</span>
+        <span style="width:24px;height:24px;flex-shrink:0">${catIcon(p.cat)}</span>
         <div>
-          <div>${p.name} <span class="rarity r-${p.rarity}">${p.rarity}</span></div>
+          <div class="title">${p.name}</div>
           <small>${p.brand} · Продажа: ${p.sell}</small>
         </div>
       </div>
@@ -553,7 +531,6 @@ function renderInventory() {
 // ===== ЖИЗНЬ ГОРОДА (КЛИЕНТЫ) =====
 function customerTick() {
   if (!state.myBlocks.length) return;
-  
   const randomBlock = state.myBlocks[Math.floor(Math.random() * state.myBlocks.length)];
   const b = state.map[randomBlock[0]][randomBlock[1]];
   if (!b || !b.shelves) return;
@@ -566,36 +543,25 @@ function customerTick() {
   if (isRapper) {
     const r = RAPPERS[Math.floor(Math.random() * RAPPERS.length)];
     if (state.rep < r.minRep) return;
-    
     const match = itemsOnShelf.find(x => r.likes.includes(x.item.brand));
     if (match) {
       const buyPrice = Math.floor(match.item.price * 1.5);
       state.cash += buyPrice;
       state.rep += 1;
-      
       b.shelves[match.index] = null;
-      
       logMsg(`🎤 ${r.name} зашел в «${b.shop}» и купил ${match.item.name} за ${buyPrice}! (+1 реп)`);
       toast(`🎤 ${r.name} купил ${match.item.name}!`);
-      
-      if (state.activeShop && state.activeShop.x === randomBlock[0] && state.activeShop.y === randomBlock[1]) {
-        showCustomer(`🎤 ${r.name}`, `Купил ${match.item.name} за ${buyPrice}`, true);
-      }
+      if (state.activeShop && state.activeShop.x === randomBlock[0] && state.activeShop.y === randomBlock[1]) showCustomer(`🎤 ${r.name}`, `Купил ${match.item.name} за ${buyPrice}`, true);
       updateUI();
       return;
     }
   } else {
     const match = itemsOnShelf[Math.floor(Math.random() * itemsOnShelf.length)];
     const buyPrice = match.item.price;
-    
     state.cash += buyPrice;
     b.shelves[match.index] = null;
-    
     logMsg(`🚶 Покупатель зашел в «${b.shop}» и купил ${match.item.name} за ${buyPrice}`);
-    
-    if (state.activeShop && state.activeShop.x === randomBlock[0] && state.activeShop.y === randomBlock[1]) {
-      showCustomer(`🚶 Покупатель`, `Купил ${match.item.name} за ${buyPrice}`, false);
-    }
+    if (state.activeShop && state.activeShop.x === randomBlock[0] && state.activeShop.y === randomBlock[1]) showCustomer(`🚶 Покупатель`, `Купил ${match.item.name} за ${buyPrice}`, false);
     updateUI();
     return;
   }
@@ -605,16 +571,16 @@ function showCustomer(name, text, isRapper) {
   const zone = $('customerZone');
   if (!zone) return;
   zone.innerHTML = `
-    <div class="customer-bubble" style="border-color: ${isRapper ? 'var(--purple)' : 'var(--green)'}">
-      <span style="width:24px;height:24px">${isRapper ? SVG.rapper : SVG.civilian}</span>
-      <div>
-        <b>${name}</b><br>
-        <span style="color:var(--muted)">${text}</span>
+    <div style="background:#1a1a1a;border:2px solid ${isRapper ? 'var(--purple)' : 'var(--green)'};padding:10px;border-radius:10px;display:flex;align-items:center;gap:10px;width:100%;box-shadow:0 5px 15px rgba(0,0,0,0.5);">
+      <span style="width:30px;height:30px;flex-shrink:0">${isRapper ? SVG.rapper : SVG.civilian}</span>
+      <div style="text-align:left">
+        <b style="color:${isRapper ? 'var(--purple)' : 'var(--green)'}">${name}</b><br>
+        <span style="color:#aaa;font-size:11px">${text}</span>
       </div>
     </div>
   `;
   setTimeout(() => {
-    if (zone.innerHTML.includes(text)) zone.innerHTML = `<div class="empty">Ждем покупателей...</div>`;
+    if (zone.innerHTML.includes(text)) zone.innerHTML = `<div style="color:#555;font-size:12px">Ждем покупателей...</div>`;
   }, 4000);
 }
 
@@ -622,13 +588,10 @@ function showCustomer(name, text, isRapper) {
 function switchTab(tabId) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  
   if (tabId === 'shop' && !state.activeShop) tabId = 'map';
-  
   const tabBtn = document.querySelector(`.tab[data-tab="${tabId}"]`);
   if (tabBtn) tabBtn.classList.add('active');
   else document.querySelector('.tab[data-tab="map"]').classList.add('active');
-  
   $('view-' + tabId).classList.add('active');
 }
 
@@ -639,14 +602,12 @@ document.querySelectorAll('.tab').forEach(tab => {
 // ===== ИНИЦИАЛИЗАЦИЯ =====
 function init() {
   load();
-  
   if (!state.map[1][1] && !state.map[2][2]) {
     state.map[0][1] = { mine: false, shop: 'Bot Drip', shelves: [] };
     state.map[2][3] = { mine: false, shop: 'LV Corner', shelves: [] };
     state.map[4][4] = { mine: false, shop: 'Street Shop', shelves: [] };
-    logMsg('Добро пожаловать в Block City! Купи блок и открой магазин.');
+    logMsg('Добро пожаловать в Block City 3D! Купи блок и открой магазин.');
   }
-  
   updateUI();
   setInterval(customerTick, 8000);
   setInterval(() => { state.day++; updateUI(); }, 60000);
