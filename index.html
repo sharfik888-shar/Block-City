@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Block City</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #0a0a0a;
+    --card: #151515;
+    --card2: #1d1d1d;
+    --border: #2a2a2a;
+    --green: #4ade80;
+    --green-dark: #14532d;
+    --red: #ef4444;
+    --red-dark: #3f1d1d;
+    --purple: #a855f7;
+    --yellow: #facc15;
+    --text: #e5e5e5;
+    --muted: #888;
+  }
+  html, body {
+    margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    min-height: 100vh;
+  }
+  body { padding: 10px; max-width: 900px; margin: 0 auto; padding-bottom: 90px; }
+  h1 { font-size: 17px; margin: 0 0 8px; display: flex; align-items: center; gap: 6px; }
+  h1 small { font-size: 11px; color: var(--muted); font-weight: normal; }
+
+  .topbar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin-bottom: 10px; }
+  .stat {
+    background: var(--card); padding: 6px 4px; border-radius: 8px;
+    font-size: 11px; border: 1px solid var(--border); text-align: center;
+  }
+  .stat b { display: block; color: var(--green); font-size: 13px; margin-top: 2px; }
+  .stat.warn b { color: var(--red); }
+
+  .tabs { display: flex; gap: 4px; margin-bottom: 10px; overflow-x: auto; padding-bottom: 2px; }
+  .tab {
+    background: var(--card); border: 1px solid var(--border); color: var(--text);
+    padding: 8px 12px; border-radius: 8px; font-size: 12px; cursor: pointer;
+    font-weight: bold; white-space: nowrap; flex-shrink: 0;
+  }
+  .tab.active { background: var(--green); color: #000; border-color: var(--green); }
+
+  .view { display: none; }
+  .view.active { display: block; animation: fade .2s; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; } }
+
+  .panel {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 10px; padding: 10px; margin-bottom: 10px;
+  }
+  .panel h2 { font-size: 13px; margin: 0 0 8px; color: var(--green); }
+
+  .item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12px; gap: 8px;
+  }
+  .item:last-child { border: none; }
+  .item small { color: var(--muted); font-size: 10px; }
+  .item-info { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+  .item-info > div { min-width: 0; overflow: hidden; }
+  .item-info .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  button {
+    background: var(--green); color: #000; border: none; padding: 7px 10px;
+    border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11px;
+    transition: .15s; white-space: nowrap;
+  }
+  button:active { transform: scale(.96); }
+  button:disabled { background: #333; color: #666; cursor: not-allowed; }
+  button.danger { background: var(--red); color: #fff; }
+  button.purple { background: var(--purple); color: #fff; }
+  button.ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+
+  #map { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; margin: 8px 0; }
+  .cell {
+    aspect-ratio: 1; background: var(--card2); border: 1px solid var(--border);
+    border-radius: 5px; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; font-size: 9px; cursor: pointer; text-align: center;
+    padding: 1px; overflow: hidden; transition: .15s; position: relative;
+  }
+  .cell:hover { border-color: var(--green); }
+  .cell.mine { background: var(--green-dark); border-color: var(--green); }
+  .cell.taken { background: var(--red-dark); border-color: var(--red); }
+  .cell .shop { font-weight: bold; font-size: 7px; line-height: 1.1; color: #ccc; margin-top: 1px; }
+  .cell .price { color: var(--yellow); font-size: 8px; }
+  .cell svg { width: 50%; height: 50%; }
+
+  .rapper {
+    background: linear-gradient(90deg, #2d1b4e, #151515);
+    border-left: 3px solid var(--purple); padding: 8px;
+    margin: 4px 0; border-radius: 6px; font-size: 12px;
+  }
+  .rapper b { color: var(--purple); }
+
+  #log {
+    font-size: 11px; color: #aaa; max-height: 300px; overflow-y: auto;
+    white-space: pre-line; background: #0a0a0a; padding: 8px; border-radius: 6px;
+    border: 1px solid var(--border); font-family: ui-monospace, monospace;
+  }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: var(--card); border: 1px solid var(--green); color: var(--text);
+    padding: 10px 16px; border-radius: 8px; font-size: 12px; z-index: 999;
+    box-shadow: 0 4px 20px rgba(0,0,0,.6); max-width: 90%; text-align: center;
+    animation: toastIn .2s;
+  }
+  @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 10px); } }
+  .toast.err { border-color: var(--red); }
+
+  .rarity { font-size: 8px; padding: 1px 5px; border-radius: 4px; font-weight: bold; vertical-align: middle; }
+  .r-common { background: #333; color: #aaa; }
+  .r-rare { background: #1e3a8a; color: #93c5fd; }
+  .r-epic { background: #4c1d95; color: #c4b5fd; }
+  .r-legend { background: #854d0e; color: #fde047; }
+
+  .empty { color: #666; font-size: 12px; padding: 8px; text-align: center; }
+  .hint { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  .shop-card {
+    background: var(--card2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px; margin-bottom: 8px;
+  }
+  .shop-card h3 { font-size: 13px; margin: 0 0 6px; color: var(--green); }
+  .shop-card .row { display: flex; justify-content: space-between; font-size: 11px; padding: 2px 0; }
+  .shop-card .row span:last-child { color: var(--yellow); }
+
+  @media (max-width: 500px) {
+    .topbar { grid-template-columns: repeat(5, 1fr); }
+    .stat { font-size: 9px; }
+    .stat b { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>🏪 Block City <small>v0.3</small></h1>
+
+<div class="topbar">
+  <div class="stat">💰<b id="cash">1000</b></div>
+  <div class="stat">⭐<b id="rep">1</b></div>
+  <div class="stat">🏪<b id="blocks">0</b></div>
+  <div class="stat">👕<b id="invCount">0</b></div>
+  <div class="stat">📅<b id="day">1</b></div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" data-tab="map">🗺️ Карта</button>
+  <button class="tab" data-tab="market">🛒 Рынок</button>
+  <button class="tab" data-tab="inv">👕 Склад</button>
+  <button class="tab" data-tab="shops">🏬 Магазины</button>
+  <button class="tab" data-tab="rap">🎤 Рэперы</button>
+  <button class="tab" data-tab="trade">🤝 Торговля</button>
+  <button class="tab" data-tab="log">📜 Лог</button>
+</div>
+
+<div class="view active" id="view-map">
+  <div class="panel">
+    <h2>Карта района (8×8)</h2>
+    <div id="map"></div>
+    <div class="hint">🟩 твой блок · 🟥 чужой · ⬛ свободен (300 кэш) · клик для покупки/продажи</div>
+  </div>
+</div>
+
+<div class="view" id="view-market">
+  <div class="panel">
+    <h2>🛒 Рынок товара</h2>
+    <div id="market"></div>
+  </div>
+</div>
+
+<div class="view" id="view-inv">
+  <div class="panel">
+    <h2>👕 Мой склад</h2>
+    <div id="inventory"></div>
+  </div>
+</div>
+
+<div class="view" id="view-shops">
+  <div class="panel">
+    <h2>🏬 Мои магазины</h2>
+    <div id="myShops"></div>
+  </div>
+</div>
+
+<div class="view" id="view-rap">
+  <div class="panel">
+    <h2>🎤 Рэперы</h2>
+    <div id="rappers"></div>
+  </div>
+</div>
+
+<div class="view" id="view-trade">
+  <div class="panel">
+    <h2>🤝 Торговля с ботами</h2>
+    <div id="tradeList"></div>
+  </div>
+</div>
+
+<div class="view" id="view-log">
+  <div class="panel">
+    <h2>📜 Лог событий</h2>
+    <div id="log"></div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// BLOCK CITY v0.3 — прототип
+// ============================================================
+
+const SIZE = 8;
+const SAVE_KEY = 'blockcity_save_v3';
+
+// ===== SVG-ИКОНКИ =====
+const SVG = {
+  blockFree: `<svg viewBox="0 0 40 40"><rect x="4" y="4" width="32" height="32" rx="6" fill="#1d1d1d" stroke="#333" stroke-width="2"/><path d="M14 20h12M20 14v12" stroke="#555" stroke-width="2" stroke-linecap="round"/></svg>`,
+  blockMine: `<svg viewBox="0 0 40 40"><rect x="4" y="4" width="32" height="32" rx="6" fill="#14532d" stroke="#4ade80" stroke-width="2"/><path d="M12 26V16l8-5 8 5v10" fill="none" stroke="#4ade80" stroke-width="2" stroke-linejoin="round"/><rect x="17" y="21" width="6" height="8" fill="#4ade80"/></svg>`,
+  blockTaken: `<svg viewBox="0 0 40 40"><rect x="4" y="4" width="32" height="32" rx="6" fill="#3f1d1d" stroke="#ef4444" stroke-width="2"/><path d="M14 14l12 12M26 14L14 26" stroke="#ef4444" stroke-width="2" stroke-linecap="round"/></svg>`,
+  hoodie: `<svg viewBox="0 0 40 40"><path d="M12 8l8-4 8 4v6l4 4v14H8V18l4-4z" fill="#333" stroke="#888" stroke-width="1.5"/><path d="M16 8c0 4 8 4 8 0" fill="none" stroke="#888" stroke-width="1.5"/></svg>`,
+  tee: `<svg viewBox="0 0 40 40"><path d="M12 10l8-4 8 4 4 6-4 2v14H12V18l-4-2z" fill="#333" stroke="#888" stroke-width="1.5"/></svg>`,
+  jeans: `<svg viewBox="0 0 40 40"><path d="M12 8h16v12l-2 14h-5l-1-12-1 12h-5l-2-14z" fill="#333" stroke="#888" stroke-width="1.5"/></svg>`,
+  sneaker: `<svg viewBox="0 0 40 40"><path d="M6 26v-6l8-2 6-6 8 2 6 6v6z" fill="#333" stroke="#888" stroke-width="1.5"/><path d="M6 26h28" stroke="#888" stroke-width="2"/></svg>`,
+  cap: `<svg viewBox="0 0 40 40"><path d="M8 22c0-8 6-12 12-12s12 4 12 12H8z" fill="#333" stroke="#888" stroke-width="1.5"/><path d="M8 22h24" stroke="#888" stroke-width="2"/></svg>`,
+  belt: `<svg viewBox="0 0 40 40"><rect x="6" y="16" width="28" height="8" rx="2" fill="#333" stroke="#888" stroke-width="1.5"/><rect x="16" y="14" width="8" height="12" rx="2" fill="#555" stroke="#aaa" stroke-width="1.5"/></svg>`,
+  chain: `<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="10" fill="none" stroke="#facc15" stroke-width="2"/><circle cx="20" cy="20" r="4" fill="#facc15"/></svg>`,
+  glasses: `<svg viewBox="0 0 40 40"><circle cx="14" cy="20" r="6" fill="none" stroke="#888" stroke-width="2"/><circle cx="26" cy="20" r="6" fill="none" stroke="#888" stroke-width="2"/><path d="M20 20h0" stroke="#888" stroke-width="2"/></svg>`,
+  watch: `<svg viewBox="0 0 40 40"><circle cx="20" cy="20" r="9" fill="#333" stroke="#facc15" stroke-width="2"/><path d="M20 14v6l4 2" stroke="#facc15" stroke-width="2" fill="none"/></svg>`,
+  bag: `<svg viewBox="0 0 40 40"><rect x="10" y="14" width="20" height="16" rx="3" fill="#333" stroke="#888" stroke-width="1.5"/><path d="M15 14v-3a5 5 0 0110 0v3" fill="none" stroke="#888" stroke-width="1.5"/></svg>`,
+  rapper: `<svg viewBox="0 0 40 40"><circle cx="20" cy="14" r="7" fill="#a855f7"/><path d="M8 34c0-7 5-11 12-11s12 4 12 11" fill="#a855f7"/><path d="M13 12h14" stroke="#111" stroke-width="2"/></svg>`,
+  mic: `<svg viewBox="0 0 40 40"><rect x="16" y="6" width="8" height="16" rx="4" fill="#a855f7"/><path d="M12 20a8 8 0 0016 0M20 28v6M14 34h12" stroke="#a855f7" stroke-width="2" fill="none" stroke-linecap="round"/></svg>`
+};
+
+function svgIcon(name, size = 24) {
+  const s = SVG[name] || SVG.hoodie;
+  return `<span style="display:inline-block;width:${size}px;height:${size}px;vertical-align:middle">${s}</span>`;
+}
+
+function catIcon(cat) {
+  const m = { 'верх': 'hoodie', 'низ': 'jeans', 'обувь': 'sneaker', 'голова': 'cap', 'аксессуар': 'chain' };
+  return svgIcon(m[cat] || 'hoodie', 20);
+}
+
+// ===== СОСТОЯНИЕ =====
+const state = {
+  cash: 1000,
+  rep: 1,
+  day: 1,
+  map: Array.from({ length: SIZE }, () => Array(SIZE).fill(null)),
+  inventory: [],
+  myBlocks: [],
+  bots: [
+    { name: 'Bot Drip', rep: 2 },
+    { name: 'Bot LV', rep: 3 },
+    { name: 'Bot Street', rep: 1 },
+    { name: 'Bot Gucci', rep: 4 }
+  ],
+  tradeOffers: [],
+  stats: { sold: 0, bought: 0, rapperSales: 0 }
+};
+
+// ===== ТОВАР =====
+const PRODUCTS = [
+  { id: 'hoodie-nike', name: 'Худи Nike', brand: 'Nike', cat: 'верх', buy: 150, sell: 280, rep: 1, rarity: 'common' },
+  { id: 'hoodie-gucci', name: 'Худи Gucci', brand: 'Gucci', cat: 'верх', buy: 400, sell: 850, rep: 3, rarity: 'rare' },
+  { id: 'hoodie-bape', name: 'Худи Bape', brand: 'Bape', cat: 'верх', buy: 250, sell: 600, rep: 2, rarity: 'rare' },
+  { id: 'tee-adidas', name: 'Футболка Adidas', brand: 'Adidas', cat: 'верх', buy: 80, sell: 160, rep: 1, rarity: 'common' },
+  { id: 'tee-balenciaga', name: 'Футболка Balenciaga', brand: 'Balenciaga', cat: 'верх', buy: 300, sell: 700, rep: 3, rarity: 'rare' },
+  { id: 'tee-offwhite', name: 'Футболка Off-White', brand: 'Off-White', cat: 'верх', buy: 280, sell: 650, rep: 3, rarity: 'rare' },
+  { id: 'jeans-levis', name: 'Джинсы Levi\'s', brand: 'Levi\'s', cat: 'низ', buy: 120, sell: 250, rep: 1, rarity: 'common' },
+  { id: 'joggers-nike', name: 'Джоггеры Nike', brand: 'Nike', cat: 'низ', buy: 130, sell: 260, rep: 1, rarity: 'common' },
+  { id: 'cargo-palm', name: 'Карго Palm Angels', brand: 'Palm Angels', cat: 'низ', buy: 350, sell: 800, rep: 3, rarity: 'rare' },
+  { id: 'sneakers-nike', name: 'Кроссовки Nike', brand: 'Nike', cat: 'обувь', buy: 200, sell: 400, rep: 1, rarity: 'common' },
+  { id: 'sneakers-jordan', name: 'Кроссовки Jordan', brand: 'Jordan', cat: 'обувь', buy: 250, sell: 550, rep: 2, rarity: 'rare' },
+  { id: 'sneakers-lanvin', name: 'Кроссовки Lanvin', brand: 'Lanvin', cat: 'обувь', buy: 500, sell: 1300, rep: 4, rarity: 'epic' },
+  { id: 'sneakers-balenciaga', name: 'Кроссовки Balenciaga', brand: 'Balenciaga', cat: 'обувь', buy: 600, sell: 1500, rep: 4, rarity: 'epic' },
+  { id: 'belt-gucci', name: 'Ремень Gucci', brand: 'Gucci', cat: 'аксессуар', buy: 200, sell: 500, rep: 3, rarity: 'rare' },
+  { id: 'belt-armani', name: 'Ремень Armani', brand: 'Armani', cat: 'аксессуар', buy: 150, sell: 380, rep: 2, rarity: 'common' },
+  { id: 'cap-supreme', name: 'Шапка Supreme', brand: 'Supreme', cat: 'голова', buy: 100, sell: 280, rep: 2, rarity: 'common' },
+  { id: 'durag-bape', name: 'Дюраг Bape', brand: 'Bape', cat: 'голова', buy: 90, sell: 220, rep: 1, rarity: 'common' },
+  { id: 'chain-chrome', name: 'Цепь Chrome Hearts', brand: 'Chrome Hearts', cat: 'аксессуар', buy: 300, sell: 900, rep: 4, rarity: 'epic' },
+  { id: 'glasses-offwhite', name: 'Очки Off-White', brand: 'Off-White', cat: 'аксессуар', buy: 150, sell: 420, rep: 3, rarity: 'rare' },
+  { id: 'watch-rolex', name: 'Часы Rolex', brand: 'Rolex', cat: 'аксессуар', buy: 800, sell: 2200, rep: 5, rarity: 'legend' },
+  { id: 'jacket-moncler', name: 'Куртка Moncler', brand: 'Moncler', cat: 'верх', buy: 600, sell: 1500, rep: 4, rarity: 'epic' },
+  { id: 'shorts-nike', name: 'Шорты Nike', brand: 'Nike', cat: 'низ', buy: 70, sell: 150, rep: 1, rarity: 'common' },
+  { id: 'puffer-lv', name: 'Пуховик LV', brand: 'Louis Vuitton', cat: 'верх', buy: 700, sell: 1800, rep: 4, rarity: 'epic' },
+  { id: 'bag-gucci', name: 'Сумка Gucci', brand: 'Gucci', cat: 'аксессуар', buy: 350, sell: 850, rep: 3, rarity: 'rare' }
+];
+
+// ===== РЭПЕРЫ =====
+const RAPPERS = [
+  { name: 'King Von', budget: 1200, likes: ['Nike', 'Jordan'], minRep: 1, rarity: 'common' },
+  { name: 'Lil Loaded', budget: 1500, likes: ['Gucci', 'Louis Vuitton'], minRep: 2, rarity: 'rare' },
+  { name: 'Polo G', budget: 1000, likes: ['Nike', 'Adidas'], minRep: 1, rarity: 'common' },
+  { name: 'NLE Choppa', budget: 1800, likes: ['Balenciaga', 'Off-White'], minRep: 2, rarity: 'rare' },
+  { name: 'Sleepy Hallow', budget: 900, likes: ['Supreme', 'Nike'], minRep: 1, rarity: 'common' },
+  { name: 'Lil Durk', budget: 2000, likes: ['Gucci', 'Lanvin', 'Chrome Hearts'], minRep: 3, rarity: 'epic' },
+  { name: 'Sheff G', budget: 1100, likes: ['Bape', 'Nike'], minRep: 1, rarity: 'common' },
+  { name: 'Pop Smoke', budget: 2500, likes: ['Louis Vuitton', 'Balenciaga', 'Rolex'], minRep: 3, rarity: 'legend' },
+  { name: 'Fivio Foreign', budget: 1300, likes: ['Off-White', 'Nike'], minRep: 2, rarity: 'rare' },
+  { name: 'Lil Tjay', budget: 1400, likes: ['Gucci', 'Palm Angels'], minRep: 2, rarity: 'rare' },
+  { name: 'Foolio', budget: 800, likes: ['Adidas', 'Supreme'], minRep: 1, rarity: 'common' },
+  { name: 'Yungeen Ace', budget: 950, likes: ['Nike', 'Bape'], minRep: 1, rarity: 'common' }
+];
+
+// ===== СОБЫТИЯ =====
+const EVENTS = [
+  { name: 'Фестиваль', desc: 'Все продажи +20%', effect: 'festival' },
+  { name: 'Спад', desc: 'Цены −20%', effect: 'slump' },
+  { name: 'Инфлюенсер', desc: '+2 репутации', effect: 'influencer' },
+  { name: 'Проверка', desc: 'Штраф 100 за высокие цены', effect: 'check' },
+  { name: 'Хайп', desc: 'Рэпер заходит гарантированно', effect: 'hype' },
+  { name: 'Спонсор', desc: '+300 кэша', effect: 'sponsor' },
+  { name: 'Слух', desc: '−1 репутация', effect: 'rumor' },
+  { name: 'Мода на оверсайз', desc: 'Худи продаются дороже', effect: 'oversize' }
+];
+
+// ===== УТИЛИТЫ =====
+const $ = (id) => document.getElementById(id);
+let toastTimer = null;
+
+function toast(msg, isErr = false) {
+  document.querySelectorAll('.toast').forEach(t => t.remove());
+  const el = document.createElement('div');
+  el.className = 'toast' + (isErr ? ' err' : '');
+  el.textContent = msg;
+  document.body.appendChild(el);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.remove(), 2200);
+}
+
+function log(msg) {
+  const el = $('log');
+  el.textContent = `[Д${state.day} ${new Date().toLocaleTimeString()}] ${msg}\n` + el.textContent;
+  if (el.textContent.length > 6000) el.textContent = el.textContent.slice(0, 6000);
+}
+
+function save() {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const data = JSON.parse(raw);
+    Object.assign(state, data);
+    return true;
+  } catch (e) { return false; }
+}
+
+function updateUI() {
+  $('cash').textContent = state.cash;
+  $('rep').textContent = state.rep;
+  $('blocks').textContent = state.myBlocks.length;
+  $('invCount').textContent = state.inventory.length;
+  $('day').textContent = state.day;
+  renderMap();
+  renderMarket();
+  renderInventory();
+  renderMyShops();
+  renderRappers();
+  renderTrade();
+  save();
+}
+
+// ===== КАРТА =====
+function renderMap() {
+  const el = $('map');
+  el.innerHTML = '';
+  for (let x = 0; x < SIZE; x++) {
+    for (let y = 0; y < SIZE; y++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      const b = state.map[x][y];
+      if (b) {
+        cell.classList.add(b.mine ? 'mine' : 'taken');
+        cell.innerHTML = `${b.mine ? SVG.blockMine : SVG.blockTaken}<div class="shop">${b.shop || '—'}</div>`;
+      } else {
+        cell.innerHTML = `${SVG.blockFree}<div class="price">${x},${y}</div>`;
+      }
+      cell.onclick = () => onCellClick(x, y);
+      el.appendChild(cell);
+    }
+  }
+}
+
+function onCellClick(x, y) {
+  const b = state.map[x][y];
+  if (b) {
+    if (b.mine) {
+      if (confirm(`Продать блок ${x},${y} за 200 кэша?`)) {
+        state.cash += 200;
+        state.myBlocks = state.myBlocks.filter(([bx, by]) => !(bx === x && by === y));
+        state.map[x][y] = null;
+        log(`🏚️ Продал блок ${x},${y} за 200`);
+        toast('Блок продан');
+        updateUI();
+      }
+    } else {
+      toast('Блок занят другим игроком', true);
+    }
+    return;
+  }
+  if (state.cash < 300) { toast('Не хватает кэша (нужно 300)', true); return; }
+  state.cash -= 300;
+  state.map[x][y] = { mine: true, shop: 'Мой магазин' };
+  state.myBlocks.push([x, y]);
+  log(`🏪 Купил блок ${x},${y} за 300`);
+  toast('Блок куплен!');
+  updateUI();
+}
+
+// ===== РЫНОК =====
+function renderMarket() {
+  const el = $('market');
+  el.innerHTML = '';
+  PRODUCTS.forEach(p => {
+    const row = document.createElement('div');
+    row.className = 'item';
+    row.innerHTML = `
+      <div class="item-info">
+        ${catIcon(p.cat)}
+        <div>
+          <div class="name">${p.name} <span class="rarity r-${p.rarity}">${p.rarity}</span></div>
+          <small>${p.brand} · ${p.cat} · покупка ${p.buy} · продажа ~${p.sell}</small>
+        </div>
+      </div>
+    `;
+    const btn = document.createElement('button');
+    btn.textContent = `Купить ${p.buy}`;
+    btn.disabled = state.cash < p.buy;
+    btn.onclick = () => {
+      state.cash -= p.buy;
+      state.inventory.push({ ...p });
+      state.stats.bought++;
+      log(`🛍️ Купил ${p.name} за ${p.buy}`);
+      toast(`Куплено: ${p.name}`);
+      updateUI();
+    };
+    row.appendChild(btn);
+    el.appendChild(row);
+  });
+}
+
+// ===== СКЛАД =====
+function renderInventory() {
+  const el = $('inventory');
+  el.innerHTML = '';
+  if (!state.inventory.length) {
+    el.innerHTML = '<div class="empty">Пусто. Купи товар на рынке.</div>';
+    return;
+  }
+  state.inventory.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'item';
+    row.innerHTML = `
+      <div class="item-info">
+        ${catIcon(p.cat)}
+        <div>
+          <div class="name">${p.name} <span class="rarity r-${p.rarity}">${p.rarity}</span></div>
+          <small>${p.brand} · продажа ${p.sell} · +${p.rep} реп</small>
+        </div>
+      </div>
+    `;
+    const btn = document.createElement('button');
+    btn.textContent = `Продать ${p.sell}`;
+    btn.onclick = () => {
+      state.cash += p.sell;
+      state.rep += p.rep;
+      state.stats.sold++;
+      state.inventory.splice(i, 1);
+      log(`💸 Продал ${p.name} за ${p.sell} (+${p.rep} реп)`);
+      toast(`Продано: ${p.name}`);
+      updateUI();
+    };
+    row.appendChild(btn);
+    el.appendChild(row);
+  });
+}
+
+// ===== МОИ МАГАЗИНЫ =====
+function renderMyShops() {
+  const el = $('myShops');
+  el.innerHTML = '';
+  if (!state.myBlocks.length) {
+    el.innerHTML = '<div class="empty">У тебя пока нет магазинов. Купи блок на карте.</div>';
+    return;
+  }
+  state.myBlocks.forEach(([x, y]) => {
+    const b = state.map[x][y];
+    if (!b) return;
+    const card = document.createElement('div');
+    card.className = 'shop-card';
+    card.innerHTML = `
+      <h3>🏬 ${b.shop || 'Мой магазин'} (${x},${y})</h3>
+      <div class="row"><span>Товаров на витрине</span><span>${state.inventory.length}</span></div>
+      <div class="row"><span>Репутация района</span><span>${state.rep}</span></div>
+    `;
+    const btn = document.createElement('button');
+    btn.textContent = 'Переименовать';
+    btn.onclick = () => {
+      const n = prompt('Новое название магазина:', b.shop || 'Мой магазин');
+      if (n) { b.shop = n; log(`✏️ Магазин переименован в «${n}»`); updateUI(); }
+    };
+    card.appendChild(btn);
+    el.appendChild(card);
+  });
+}
+
+// ===== РЭПЕРЫ =====
+function renderRappers() {
+  const el = $('rappers');
+  el.innerHTML = '';
+  RAPPERS.forEach(r => {
+    const div = document.createElement('div');
+    div.className = 'rapper';
+    div.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px">
+        ${svgIcon('rapper', 28)}
+        <div>
+          <b>${r.name}</b> <span class="rarity r-${r.rarity}">${r.rarity}</span><br>
+          <small>Бюджет: ${r.budget} · Любит: ${r.likes.join(', ')} · Мин. реп: ${r.minRep}</small>
+        </div>
+      </div>
+    `;
+    el.appendChild(div);
+  });
+}
+
+// ===== ТОРГОВЛЯ С БОТАМИ =====
+function renderTrade() {
+  const el = $('tradeList');
+  el.innerHTML = '';
+  if (!state.tradeOffers.length) {
+    el.innerHTML = '<div class="empty">Нет предложений. Жди или обнови.</div>';
+    return;
+  }
+  state.tradeOffers.forEach((offer, i) => {
+    const row = document.createElement('div');
+    row.className = 'item';
+    row.innerHTML = `
+      <div class="item-info">
+        ${catIcon(offer.item.cat)}
+        <div>
+          <div class="name">${offer.bot} → ${offer.price}</div>
+          <small>${offer.item.name} · ${offer.item.brand} · ${offer.item.rarity}</small>
+        </div>
+      </div>
+    `;
+    const accept = document.createElement('button');
+    accept.textContent = 'Принять';
+    accept.onclick = () => {
+      const idx = state.inventory.findIndex(p => p.id === offer.item.id);
+      if (idx === -1) { toast('Этого товара нет на складе', true); return; }
+      state.inventory.splice(idx, 1);
+      state.cash += offer.price;
+      state.tradeOffers.splice(i, 1);
+      log(`🤝 ${offer.bot} купил ${offer.item.name} за ${offer.price}`);
+      toast('Сделка закрыта');
+      updateUI();
+    };
+    const decline = document.createElement('button');
+    decline.className = 'danger';
+    decline.textContent = '✕';
+    decline.onclick = () => {
+      state.tradeOffers.splice(i, 1);
+      updateUI();
+    };
+    row.appendChild(accept);
+    row.appendChild(decline);
+    el.appendChild(row);
+  });
+}
+
+// ===== ГЕНЕРАЦИЯ ПРЕДЛОЖЕНИЙ =====
+function generateTradeOffer() {
+  if (state.inventory.length === 0) return;
+  const item = state.inventory[Math.floor(Math.random() * state.inventory.length)];
+  const bot = state.bots[Math.floor(Math.random() * state.bots.length)];
+  const price = Math.floor(item.sell * (0.7 + Math.random() * 0.6));
+  state.tradeOffers.push({ bot: bot.name, item, price });
+  if (state.tradeOffers.length > 5) state.tradeOffers.shift();
+  renderTrade();
+}
+
+// ===== РЭПЕР ЗАХОДИТ =====
+function rapperVisit() {
+  if (state.rep < 1) return;
+  const r = RAPPERS[Math.floor(Math.random() * RAPPERS.length)];
+  if (state.rep < r.minRep) {
+    log(`🚶 ${r.name} прошёл мимо (нужна реп ${r.minRep})`);
+    return;
+  }
+  const idx = state.inventory.findIndex(p => r.likes.includes(p.brand));
+  if (idx === -1) {
+    log(`🚶 ${r.name} зашёл, но не нашёл свой бренд (${r.likes.join('/')})`);
+    return;
+  }
+  const item = state.inventory[idx];
+  const price = Math.min(r.budget, Math.floor(item.sell * 1.5));
+  state.cash += price;
+  state.rep += 1;
+  state.stats.rapperSales++;
+  state.inventory.splice(idx, 1);
+  log(`🎤 ${r.name} купил ${item.name} за ${price}! (+1 реп)`);
+  toast(`🎤 ${r.name} купил ${item.name}!`);
+  updateUI();
+}
+
+// ===== СОБЫТИЕ ДНЯ =====
+function triggerEvent() {
+  const ev = EVENTS[Math.floor(Math.random() * EVENTS.length)];
+  log(`🎲 Событие: ${ev.name} — ${ev.desc}`);
+  switch (ev.effect) {
+    case 'influencer': state.rep += 2; break;
+    case 'sponsor': state.cash += 300; break;
+    case 'rumor': state.rep = Math.max(0, state.rep - 1); break;
+    case 'check': if (state.rep > 3) state.cash = Math.max(0, state.cash - 100); break;
+    case 'hype': rapperVisit(); break;
+  }
+  toast(`🎲 ${ev.name}`);
+}
+
+// ===== ВКЛАДКИ =====
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.onclick = () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    tab.classList.add('active');
+    $('view-' + tab.dataset.tab).classList.add('active');
+  };
+});
+
+// ===== СТАРТ =====
+function init() {
+  const loaded = load();
+  if (!loaded) {
+    state.map[0][1] = { mine: false, shop: 'Bot Drip' };
+    state.map[2][3] = { mine: false, shop: 'LV Corner' };
+    state.map[4][4] = { mine: false, shop: 'Street Shop' };
+    state.map[6][2] = { mine: false, shop: 'Gucci Hub' };
+    log('Добро пожаловать в Block City! Купи блок и начни торговать.');
+  } else {
+    log('Прогресс загружен.');
+  }
+  updateUI();
+
+  setInterval(rapperVisit, 12000);
+  setInterval(generateTradeOffer, 10000);
+  setInterval(() => { state.day++; triggerEvent(); updateUI(); }, 45000);
+}
+
+init();
+</script>
+</body>
+</html>
